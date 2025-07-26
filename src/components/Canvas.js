@@ -6,16 +6,9 @@ const MAX_HISTORY = 40;
 
 const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   const { orderData } = useOrder();
+  const normalizedImages = Array.isArray(orderData.images) ? [...orderData.images] : [];
+  while (normalizedImages.length < MAX_TABS) normalizedImages.push(null);
 
-  // 画像配列を正規化（5枚まで）
-  const normalizedImages = Array.isArray(orderData.images)
-    ? [...orderData.images]
-    : [];
-  while (normalizedImages.length < MAX_TABS) {
-    normalizedImages.push(null);
-  }
-
-  // タブ状態
   const [tabs, setTabs] = useState(() =>
     normalizedImages.map((img, i) => ({
       id: Date.now() + i,
@@ -23,42 +16,25 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       dataURL: img,
     }))
   );
-
   const [activeTabIndex, setActiveTabIndex] = useState(initialTabIndex);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
-
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
 
   const canvasRef = useRef(null);
+  const [histories, setHistories] = useState(() => Array(MAX_TABS).fill().map(() => []));
+  const [redos, setRedos] = useState(() => Array(MAX_TABS).fill().map(() => []));
 
-  // タブごとの history / redoStack を保持
-  const [histories, setHistories] = useState(() =>
-    Array(MAX_TABS).fill().map(() => [])
-  );
-  const [redos, setRedos] = useState(() =>
-    Array(MAX_TABS).fill().map(() => [])
-  );
-
-  const currentTab = tabs[activeTabIndex];
-
-  // 画面高さに合わせたcanvas高さをstateで管理（リサイズ対応）
-  const [canvasHeight, setCanvasHeight] = useState(() =>
-    Math.floor(window.innerHeight * 0.5)
-  );
+  const [canvasHeight, setCanvasHeight] = useState(() => Math.floor(window.innerHeight * 0.5));
   useEffect(() => {
-    const handleResize = () => {
-      setCanvasHeight(Math.floor(window.innerHeight * 0.6));
-    };
+    const handleResize = () => setCanvasHeight(Math.floor(window.innerHeight * 0.6));
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    setActiveTabIndex(initialTabIndex);
-  }, [initialTabIndex]);
+  useEffect(() => setActiveTabIndex(initialTabIndex), [initialTabIndex]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -67,13 +43,12 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
-    if (currentTab?.dataURL) {
+    const drawImage = (imgSrc) => {
       const img = new Image();
       img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        setHistories((prev) => {
+        setHistories(prev => {
           const updated = [...prev];
           if (updated[activeTabIndex].length === 0) {
             updated[activeTabIndex] = [canvas.toDataURL()];
@@ -81,25 +56,17 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
           return updated;
         });
       };
-      img.src = currentTab.dataURL;
-    } else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      setHistories((prev) => {
-        const updated = [...prev];
-        if (updated[activeTabIndex].length === 0) {
-          updated[activeTabIndex] = [canvas.toDataURL()];
-        }
-        return updated;
-      });
-    }
-  }, [activeTabIndex, currentTab.dataURL, canvasHeight]);
+      img.src = imgSrc;
+    };
+
+    currentTab?.dataURL ? drawImage(currentTab.dataURL) : ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, [activeTabIndex, canvasHeight]);
+
+  const currentTab = tabs[activeTabIndex];
 
   const getMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
   const handleMouseDown = (e) => {
@@ -129,22 +96,19 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   const saveCanvasToTab = () => {
     const canvas = canvasRef.current;
     const dataURL = canvas.toDataURL();
-
-    setTabs((prev) => {
+    setTabs(prev => {
       const updated = [...prev];
       updated[activeTabIndex] = { ...updated[activeTabIndex], dataURL };
       return updated;
     });
-
-    setHistories((prev) => {
+    setHistories(prev => {
       const updated = [...prev];
-      const newHistory = [...updated[activeTabIndex], dataURL];
-      if (newHistory.length > MAX_HISTORY) newHistory.shift();
-      updated[activeTabIndex] = newHistory;
+      const history = [...updated[activeTabIndex], dataURL];
+      if (history.length > MAX_HISTORY) history.shift();
+      updated[activeTabIndex] = history;
       return updated;
     });
-
-    setRedos((prev) => {
+    setRedos(prev => {
       const updated = [...prev];
       updated[activeTabIndex] = [];
       return updated;
@@ -168,26 +132,21 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   const handleUndo = async () => {
     const history = histories[activeTabIndex];
     if (history.length <= 1) return;
-
     const newHistory = [...history];
     const last = newHistory.pop();
-
-    setRedos((prev) => {
+    setRedos(prev => {
       const updated = [...prev];
       updated[activeTabIndex] = [last, ...updated[activeTabIndex]];
       return updated;
     });
-
     const prevDataURL = newHistory[newHistory.length - 1];
     await restoreCanvas(prevDataURL);
-
-    setTabs((prev) => {
+    setTabs(prev => {
       const updated = [...prev];
       updated[activeTabIndex] = { ...updated[activeTabIndex], dataURL: prevDataURL };
       return updated;
     });
-
-    setHistories((prev) => {
+    setHistories(prev => {
       const updated = [...prev];
       updated[activeTabIndex] = newHistory;
       return updated;
@@ -195,25 +154,21 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   };
 
   const handleRedo = async () => {
-    const redo = redos[activeTabIndex];
-    if (redo.length === 0) return;
-
-    const [first, ...rest] = redo;
+    const redoStack = redos[activeTabIndex];
+    if (redoStack.length === 0) return;
+    const [first, ...rest] = redoStack;
     await restoreCanvas(first);
-
-    setTabs((prev) => {
+    setTabs(prev => {
       const updated = [...prev];
       updated[activeTabIndex] = { ...updated[activeTabIndex], dataURL: first };
       return updated;
     });
-
-    setHistories((prev) => {
+    setHistories(prev => {
       const updated = [...prev];
       updated[activeTabIndex] = [...updated[activeTabIndex], first];
       return updated;
     });
-
-    setRedos((prev) => {
+    setRedos(prev => {
       const updated = [...prev];
       updated[activeTabIndex] = rest;
       return updated;
@@ -230,7 +185,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
@@ -246,71 +200,22 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     reader.readAsDataURL(file);
   };
 
-  // インラインスタイルまとめ
-  const modalStyle = {
-  height: '90vh',
-  maxWidth: 900,
-  padding: 20,
-  boxSizing: 'border-box',
-  display: 'flex',
-  flexDirection: 'column',
-  backgroundColor: 'white',
-  borderRadius: 12,
-  overflow: 'hidden', // はみ出し対策
-};
-
-  const canvasContainerStyle = {
-  border: '1px solid #916B5E',
-  borderRadius: 10,
-  boxShadow: '0 5px 10px rgba(0,0,0,0.1)',
-  margin: '10px 0 10px 0', // 上下マージンを狭く
-  width: 600,
-  height: canvasHeight,
-  display: 'block',
-  flexShrink: 0,
-};
-
-  const canvasStyle = {
-    flexGrow: 1,
-    borderRadius: 10,
-    display: 'block',
-    width: '100%',
-    height: '100%',
-    cursor: 'crosshair',
-  };
-
-  const toolAreaStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 12,
-  marginBottom: 10,
-  flexWrap: 'wrap',
-  fontSize: '0.9rem',
-};
-
-  const actionButtonsStyle = {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: 10,
-  };
-
   return (
-    <div style={modalStyle}>
-      {/* タブ切替 */}
-      <div style={{ marginBottom: 10 }}>
+    <div style={{ padding: 10, height: '90vh', overflow: 'auto' }}>
+      {/* タブ切り替え */}
+      <div style={{ marginBottom: 8 }}>
         {tabs.map((tab, idx) => (
           <button
             key={tab.id}
             onClick={() => setActiveTabIndex(idx)}
             style={{
               fontWeight: idx === activeTabIndex ? 'bold' : 'normal',
-              marginRight: 10,
-              minWidth: 30,
-              borderRadius: 6,
-              border: '1px solid #916B5E',
-              backgroundColor: idx === activeTabIndex ? '#f4e8e1' : 'white',
+              marginRight: 6,
+              borderRadius: 4,
+              padding: '4px 8px',
+              border: '1px solid #ccc',
+              background: idx === activeTabIndex ? '#f0e7e3' : '#fff',
               cursor: isDrawing ? 'not-allowed' : 'pointer',
-              padding: '6px 10px',
             }}
             disabled={isDrawing}
           >
@@ -319,13 +224,27 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         ))}
       </div>
 
-      {/* Canvas */}
-      <div style={canvasContainerStyle}>
+      {/* キャンバス */}
+      <div
+        style={{
+          border: '1px solid #aaa',
+          borderRadius: 10,
+          width: '100%',
+          maxWidth: 600,
+          margin: '0 auto 10px',
+        }}
+      >
         <canvas
           ref={canvasRef}
           width={600}
           height={canvasHeight}
-          style={canvasStyle}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'block',
+            borderRadius: 10,
+            cursor: 'crosshair',
+          }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -333,42 +252,43 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         />
       </div>
 
-      {/* ツール */}
-      <div style={toolAreaStyle}>
-        <label>
-          ツール:
-          <select
-            value={tool}
-            onChange={(e) => setTool(e.target.value)}
-            style={{ marginLeft: 10, borderRadius: 6, border: '1px solid #916B5E' }}
-            disabled={isDrawing}
-          >
-            <option value="pen">ペン</option>
-            <option value="eraser">消しゴム</option>
-          </select>
-        </label>
+      {/* ツールバー */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          marginBottom: 10,
+        }}
+      >
+        {/* ツール選択 */}
+        <select
+          value={tool}
+          onChange={(e) => setTool(e.target.value)}
+          disabled={isDrawing}
+          style={{ padding: 6, borderRadius: 6 }}
+        >
+          <option value="pen">✏️ ペン</option>
+          <option value="eraser">🧽 消しゴム</option>
+        </select>
 
-        <label>
-          色:
+        {/* 色選択 */}
+        <label title="色">
+          🎨
           <input
             type="color"
             value={color}
             onChange={(e) => setColor(e.target.value)}
             disabled={tool === 'eraser' || isDrawing}
-            style={{
-              marginLeft: 10,
-              width: 40,
-              height: 30,
-              border: '1px solid #916B5E',
-              borderRadius: 6,
-              padding: 0,
-              cursor: tool === 'eraser' || isDrawing ? 'not-allowed' : 'pointer',
-            }}
+            style={{ marginLeft: 4, width: 36, height: 36, border: 'none' }}
           />
         </label>
 
-        <label style={{ display: 'flex', alignItems: 'center' }}>
-          線幅:
+        {/* 線幅 */}
+        <label title="線の太さ" style={{ display: 'flex', alignItems: 'center' }}>
+          ●
           <input
             type="range"
             min="1"
@@ -376,101 +296,43 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
             value={lineWidth}
             onChange={(e) => setLineWidth(Number(e.target.value))}
             disabled={isDrawing}
-            style={{
-              verticalAlign: 'middle',
-              marginLeft: 10,
-              cursor: isDrawing ? 'not-allowed' : 'pointer',
-            }}
+            style={{ marginLeft: 6 }}
           />
-          {lineWidth}
         </label>
 
-        {/* Undo, Redo, Clear ボタン */}
-        <button
-          onClick={handleUndo}
-          disabled={histories[activeTabIndex]?.length <= 1 || isDrawing}
-          style={{
-            marginLeft: 20,
-            padding: '6px 14px',
-            borderRadius: 6,
-            border: '1px solid #916B5E',
-            backgroundColor: 'white',
-            cursor:
-              histories[activeTabIndex]?.length <= 1 || isDrawing
-                ? 'not-allowed'
-                : 'pointer',
-          }}
-        >
-          Undo
+        {/* 操作ボタン */}
+        <button onClick={handleUndo} disabled={isDrawing || histories[activeTabIndex].length <= 1}>
+          ↩️
         </button>
-        <button
-          onClick={handleRedo}
-          disabled={redos[activeTabIndex]?.length === 0 || isDrawing}
-          style={{
-            marginLeft: 10,
-            padding: '6px 14px',
-            borderRadius: 6,
-            border: '1px solid #916B5E',
-            backgroundColor: 'white',
-            cursor:
-              redos[activeTabIndex]?.length === 0 || isDrawing
-                ? 'not-allowed'
-                : 'pointer',
-          }}
-        >
-          Redo
+        <button onClick={handleRedo} disabled={isDrawing || redos[activeTabIndex].length === 0}>
+          ↪️
         </button>
-        <button
-          onClick={clearCanvas}
-          disabled={isDrawing}
-          style={{
-            marginLeft: 10,
-            padding: '6px 14px',
-            borderRadius: 6,
-            border: '1px solid #916B5E',
-            backgroundColor: 'white',
-            cursor: isDrawing ? 'not-allowed' : 'pointer',
-          }}
-        >
-          クリア
+        <button onClick={clearCanvas} disabled={isDrawing}>
+          🧹
         </button>
 
         {/* 画像アップロード */}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageUpload}
-          disabled={isDrawing}
-          style={{ marginLeft: 20, cursor: isDrawing ? 'not-allowed' : 'pointer' }}
-        />
+        <label>
+          📁
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            disabled={isDrawing}
+            style={{ display: 'none' }}
+          />
+        </label>
       </div>
 
-      {/* 操作ボタン */}
-      <div style={actionButtonsStyle}>
-        <button
-          onClick={onCancel}
-          disabled={isDrawing}
-          style={{
-            padding: '6px 16px',
-            borderRadius: 6,
-            border: '1px solid #916B5E',
-            backgroundColor: 'white',
-            cursor: isDrawing ? 'not-allowed' : 'pointer',
-          }}
-        >
+      {/* 完了・キャンセル */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+        <button onClick={onCancel} disabled={isDrawing}>
           キャンセル
         </button>
         <button
           onClick={() => onSave(tabs)}
           disabled={isDrawing}
-          style={{
-            padding: '6px 16px',
-            borderRadius: 6,
-            border: 'none',
-            backgroundColor: '#916B5E',
-            color: 'white',
-            cursor: isDrawing ? 'not-allowed' : 'pointer',
-          }}
+          style={{ background: '#916B5E', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 6 }}
         >
           完了
         </button>
