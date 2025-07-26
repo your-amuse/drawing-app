@@ -15,7 +15,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     normalizedImages.push(null);
   }
 
-  // タブ状態：id, name, dataURL(画像)
+  // タブ状態
   const [tabs, setTabs] = useState(() =>
     normalizedImages.map((img, i) => ({
       id: Date.now() + i,
@@ -24,19 +24,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     }))
   );
 
-  // アクティブなタブ
   const [activeTabIndex, setActiveTabIndex] = useState(initialTabIndex);
-
-  // 外部のinitialTabIndex変化に対応
-  useEffect(() => {
-    setActiveTabIndex(initialTabIndex);
-  }, [initialTabIndex]);
-
-  // 描画履歴（Undo用）
-  const [history, setHistory] = useState([]);
-  // Redo用履歴スタック
-  const [redoStack, setRedoStack] = useState([]);
-
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastPos, setLastPos] = useState({ x: 0, y: 0 });
 
@@ -46,9 +34,20 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
 
   const canvasRef = useRef(null);
 
+  // タブごとの history / redoStack を保持
+  const [histories, setHistories] = useState(() =>
+    Array(MAX_TABS).fill().map(() => [])
+  );
+  const [redos, setRedos] = useState(() =>
+    Array(MAX_TABS).fill().map(() => [])
+  );
+
   const currentTab = tabs[activeTabIndex];
 
-  // タブ切替時にCanvasに描画する
+  useEffect(() => {
+    setActiveTabIndex(initialTabIndex);
+  }, [initialTabIndex]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -62,19 +61,27 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // 描画履歴はリセットせず、履歴がなければ初期状態をセット
-        setHistory((h) => (h.length === 0 ? [canvas.toDataURL()] : h));
-        //setRedoStack([]);
+        setHistories((prev) => {
+          const updated = [...prev];
+          if (updated[activeTabIndex].length === 0) {
+            updated[activeTabIndex] = [canvas.toDataURL()];
+          }
+          return updated;
+        });
       };
       img.src = currentTab.dataURL;
     } else {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      setHistory((h) => (h.length === 0 ? [canvas.toDataURL()] : h));
-      //setRedoStack([]);
+      setHistories((prev) => {
+        const updated = [...prev];
+        if (updated[activeTabIndex].length === 0) {
+          updated[activeTabIndex] = [canvas.toDataURL()];
+        }
+        return updated;
+      });
     }
   }, [activeTabIndex, currentTab.dataURL]);
 
-  // マウス位置取得
   const getMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     return {
@@ -83,13 +90,11 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     };
   };
 
-  // 描画開始
   const handleMouseDown = (e) => {
     setIsDrawing(true);
     setLastPos(getMousePos(e));
   };
 
-  // 描画中
   const handleMouseMove = (e) => {
     if (!isDrawing) return;
     const ctx = canvasRef.current.getContext('2d');
@@ -103,14 +108,12 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     setLastPos(newPos);
   };
 
-  // 描画終了
   const handleMouseUp = () => {
     if (!isDrawing) return;
     setIsDrawing(false);
     saveCanvasToTab();
   };
 
-  // Canvas内容を現在タブに保存＆履歴に追加
   const saveCanvasToTab = () => {
     const canvas = canvasRef.current;
     const dataURL = canvas.toDataURL();
@@ -121,16 +124,21 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       return updated;
     });
 
-    setHistory((prev) => {
-      const newHistory = [...prev, dataURL];
+    setHistories((prev) => {
+      const updated = [...prev];
+      const newHistory = [...updated[activeTabIndex], dataURL];
       if (newHistory.length > MAX_HISTORY) newHistory.shift();
-      return newHistory;
+      updated[activeTabIndex] = newHistory;
+      return updated;
     });
 
-    //setRedoStack([]);
+    setRedos((prev) => {
+      const updated = [...prev];
+      updated[activeTabIndex] = [];
+      return updated;
+    });
   };
 
-  // Canvasに描画（画像復元）
   const restoreCanvas = (dataURL) => {
     return new Promise((resolve) => {
       const canvas = canvasRef.current;
@@ -145,13 +153,18 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     });
   };
 
-  // Undo処理
   const handleUndo = async () => {
+    const history = histories[activeTabIndex];
     if (history.length <= 1) return;
+
     const newHistory = [...history];
     const last = newHistory.pop();
-    setRedoStack((prev) => [last, ...prev]);
-    console.log(redoStack);
+
+    setRedos((prev) => {
+      const updated = [...prev];
+      updated[activeTabIndex] = [last, ...updated[activeTabIndex]];
+      return updated;
+    });
 
     const prevDataURL = newHistory[newHistory.length - 1];
     await restoreCanvas(prevDataURL);
@@ -162,14 +175,18 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       return updated;
     });
 
-    setHistory(newHistory);
-    
+    setHistories((prev) => {
+      const updated = [...prev];
+      updated[activeTabIndex] = newHistory;
+      return updated;
+    });
   };
 
-  // Redo処理
   const handleRedo = async () => {
-    if (redoStack.length === 0) return;
-    const [first, ...rest] = redoStack;
+    const redo = redos[activeTabIndex];
+    if (redo.length === 0) return;
+
+    const [first, ...rest] = redo;
     await restoreCanvas(first);
 
     setTabs((prev) => {
@@ -178,11 +195,19 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       return updated;
     });
 
-    setHistory((prev) => [...prev, first]);
-    setRedoStack(rest);
+    setHistories((prev) => {
+      const updated = [...prev];
+      updated[activeTabIndex] = [...updated[activeTabIndex], first];
+      return updated;
+    });
+
+    setRedos((prev) => {
+      const updated = [...prev];
+      updated[activeTabIndex] = rest;
+      return updated;
+    });
   };
 
-  // Canvasクリア
   const clearCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -190,7 +215,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     saveCanvasToTab();
   };
 
-  // 画像アップロードしてCanvasに描画
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -210,9 +234,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     reader.readAsDataURL(file);
   };
 
-  // 完了ボタンで親へ更新を伝える
   const handleSave = () => {
-    setRedoStack([]);
     const updatedImages = tabs.map((tab) => tab.dataURL || null);
     onSave(updatedImages);
   };
@@ -237,7 +259,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         ))}
       </div>
 
-      {/* Canvas本体 */}
+      {/* Canvas */}
       <canvas
         ref={canvasRef}
         width={600}
@@ -249,7 +271,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         onMouseLeave={handleMouseUp}
       />
 
-      {/* ツール選択など */}
+      {/* ツール */}
       <div style={{ marginBottom: 10 }}>
         <label>
           ツール:
@@ -292,10 +314,10 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
 
       {/* Undo, Redo, Clear */}
       <div style={{ marginBottom: 10 }}>
-        <button onClick={handleUndo} disabled={history.length <= 1 || isDrawing}>
+        <button onClick={handleUndo} disabled={histories[activeTabIndex]?.length <= 1 || isDrawing}>
           Undo
         </button>
-        <button onClick={handleRedo} disabled={redoStack.length === 0 || isDrawing} style={{ marginLeft: 10 }}>
+        <button onClick={handleRedo} disabled={redos[activeTabIndex]?.length === 0 || isDrawing} style={{ marginLeft: 10 }}>
           Redo
         </button>
         <button onClick={clearCanvas} disabled={isDrawing} style={{ marginLeft: 10 }}>
@@ -308,7 +330,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isDrawing} />
       </div>
 
-      {/* キャンセル・完了 */}
+      {/* 操作ボタン */}
       <div>
         <button onClick={onCancel} disabled={isDrawing} style={{ marginRight: 20 }}>
           キャンセル
