@@ -4,7 +4,6 @@ import Canvas from './Canvas';
 import { useOrder } from '../OrderContext';
 import { AuthContext } from '../AuthContext';
 import LoginModal from './LoginModal';
-import StepProgressBar from './StepProgressBar';
 import PageWrapper from './PageWrapper';
 
 const Order = () => {
@@ -16,16 +15,26 @@ const Order = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const navigate = useNavigate();
 
-  // レスポンシブ対応用state（600px以下をモバイル判定）
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 600);
-
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 600);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 600);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (isCanvasVisible) {
+      document.body.style.overflow = 'hidden';
+      const preventTouchMove = (e) => e.preventDefault();
+      document.addEventListener('touchmove', preventTouchMove, { passive: false });
+      return () => {
+        document.body.style.overflow = '';
+        document.removeEventListener('touchmove', preventTouchMove, { passive: false });
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isCanvasVisible]);
 
   const openCanvas = (index) => {
     setActiveImageIndex(index);
@@ -54,7 +63,8 @@ const Order = () => {
     }
   }, [currentUser, shouldNavigateAfterLogin, navigate]);
 
-  const handleCanvasSave = (updatedImages) => {
+  const handleCanvasSave = (updatedTabs) => {
+    const updatedImages = updatedTabs.map(tab => tab.dataURL);
     setOrderData(prev => ({ ...prev, images: updatedImages }));
     setIsCanvasVisible(false);
   };
@@ -63,7 +73,6 @@ const Order = () => {
     setIsCanvasVisible(false);
   };
 
-  // スタイル調整
   const labelStyle = {
     marginBottom: '6px',
     fontWeight: 'bold',
@@ -82,7 +91,6 @@ const Order = () => {
     boxSizing: 'border-box',
   };
 
-  // レスポンシブなグリッド列数
   const formGridStyle = {
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
@@ -132,159 +140,160 @@ const Order = () => {
   };
 
   return (
-  <PageWrapper currentStep={0} title="フルオーダー依頼">
-    {/* 画像アップロード＆編集 */}
-    <label style={labelStyle}>参考画像（最大5枚）</label>
-    <div style={thumbnailGridStyle}>
-      {Array.from({ length: 5 }).map((_, index) => (
-        <div
-          key={index}
-          style={imageBoxStyle}
-          onClick={() => openCanvas(index)}
-        >
-          {orderData.images?.[index] ? (
-            <img
-              src={orderData.images[index]}
-              alt={`参考画像${index + 1}`}
-              style={{
-                maxHeight: '100%',
-                maxWidth: '100%',
-                objectFit: 'contain',
-              }}
-            />
-          ) : null}
-        </div>
-      ))}
-    </div>
-
-    {/* 注文フォーム */}
-    <form onSubmit={handleSubmit}>
-      <div style={formGridStyle}>
-        <div style={fullWidthStyle}>
-          <label style={labelStyle}>説明</label>
-          <textarea
-            name="description"
-            value={orderData.description || ''}
-            onChange={handleChange}
-            rows={6}
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>着丈（cm）</label>
-          <input
-            type="number"
-            name="length"
-            value={orderData.length || ''}
-            onChange={handleChange}
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>身幅（cm）</label>
-          <input
-            type="number"
-            name="width"
-            value={orderData.width || ''}
-            onChange={handleChange}
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>肩幅（cm）</label>
-          <input
-            type="number"
-            name="shoulder"
-            value={orderData.shoulder || ''}
-            onChange={handleChange}
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>袖丈（cm）</label>
-          <input
-            type="number"
-            name="sleeve"
-            value={orderData.sleeve || ''}
-            onChange={handleChange}
-            style={inputStyle}
-          />
-        </div>
-        <div style={fullWidthStyle}>
-          <label style={labelStyle}>希望素材</label>
-          <input
-            type="text"
-            name="material"
-            value={orderData.material || ''}
-            onChange={handleChange}
-            style={inputStyle}
-          />
-        </div>
-        <div style={fullWidthStyle}>
-          <label style={labelStyle}>フィット感</label>
-          <select
-            name="fit"
-            value={orderData.fit || 'standard'}
-            onChange={handleChange}
-            style={inputStyle}
+    <PageWrapper currentStep={0} title="フルオーダー依頼">
+      <label style={labelStyle}>参考画像（最大5枚）</label>
+      <div style={thumbnailGridStyle}>
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div
+            key={index}
+            style={imageBoxStyle}
+            onClick={() => openCanvas(index)}
           >
-            <option value="tight">タイト</option>
-            <option value="standard">標準</option>
-            <option value="loose">ゆったり</option>
-          </select>
-        </div>
+            {orderData.images?.[index] ? (
+              <img
+                src={orderData.images[index]}
+                alt={`参考画像${index + 1}`}
+                style={{
+                  maxHeight: '100%',
+                  maxWidth: '100%',
+                  objectFit: 'contain',
+                }}
+              />
+            ) : null}
+          </div>
+        ))}
       </div>
 
-      <button type="submit" style={buttonStyle}>依頼する</button>
-    </form>
+      <form onSubmit={handleSubmit}>
+        <div style={formGridStyle}>
+          <div style={fullWidthStyle}>
+            <label style={labelStyle}>説明</label>
+            <textarea
+              name="description"
+              value={orderData.description || ''}
+              onChange={handleChange}
+              rows={6}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>着丈（cm）</label>
+            <input
+              type="number"
+              name="length"
+              value={orderData.length || ''}
+              onChange={handleChange}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>身幅（cm）</label>
+            <input
+              type="number"
+              name="width"
+              value={orderData.width || ''}
+              onChange={handleChange}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>肩幅（cm）</label>
+            <input
+              type="number"
+              name="shoulder"
+              value={orderData.shoulder || ''}
+              onChange={handleChange}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>袖丈（cm）</label>
+            <input
+              type="number"
+              name="sleeve"
+              value={orderData.sleeve || ''}
+              onChange={handleChange}
+              style={inputStyle}
+            />
+          </div>
+          <div style={fullWidthStyle}>
+            <label style={labelStyle}>希望素材</label>
+            <input
+              type="text"
+              name="material"
+              value={orderData.material || ''}
+              onChange={handleChange}
+              style={inputStyle}
+            />
+          </div>
+          <div style={fullWidthStyle}>
+            <label style={labelStyle}>フィット感</label>
+            <select
+              name="fit"
+              value={orderData.fit || 'standard'}
+              onChange={handleChange}
+              style={inputStyle}
+            >
+              <option value="tight">タイト</option>
+              <option value="standard">標準</option>
+              <option value="loose">ゆったり</option>
+            </select>
+          </div>
+        </div>
 
-    {/* Canvasモーダル */}
-    {isCanvasVisible && (
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0,0,0,0.5)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+        <button type="submit" style={buttonStyle}>依頼する</button>
+      </form>
+
+      {/* Canvasモーダル */}
+      {isCanvasVisible && (
         <div
           style={{
-            background: '#fff',
-            padding: 20,
-            width: '90%',
-            maxWidth: 850,
-            maxHeight: '90vh',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            boxShadow: '0 0 20px rgba(0,0,0,0.3)',
-            border: '12px solid #111', // 黒い額縁風
-            boxSizing: 'border-box',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            touchAction: 'none',
           }}
+          onTouchMove={(e) => e.stopPropagation()}
         >
-          <Canvas
-            initialTabIndex={activeImageIndex}
-            onCancel={handleCanvasCancel}
-            onSave={handleCanvasSave}
-          />
+          <div
+            style={{
+              background: '#fff',
+              padding: 20,
+              width: '90%',
+              maxWidth: 850,
+              maxHeight: '90vh',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              boxShadow: '0 0 20px rgba(0,0,0,0.3)',
+              border: '12px solid #111',
+              boxSizing: 'border-box',
+              touchAction: 'none',
+            }}
+          >
+            <Canvas
+              key={activeImageIndex}
+              initialTabIndex={activeImageIndex}
+              onCancel={handleCanvasCancel}
+              onSave={handleCanvasSave}
+            />
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {/* ログインモーダル */}
-    <LoginModal
-      isOpen={isLoginOpen}
-      onClose={() => setIsLoginOpen(false)}
-    />
-  </PageWrapper>
-);
-
+      {/* ログインモーダル */}
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+      />
+    </PageWrapper>
+  );
 };
 
 export default Order;

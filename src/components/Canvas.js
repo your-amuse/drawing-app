@@ -44,6 +44,18 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
 
   const currentTab = tabs[activeTabIndex];
 
+  // 画面高さに合わせたcanvas高さをstateで管理（リサイズ対応）
+  const [canvasHeight, setCanvasHeight] = useState(() =>
+    Math.floor(window.innerHeight * 0.5)
+  );
+  useEffect(() => {
+    const handleResize = () => {
+      setCanvasHeight(Math.floor(window.innerHeight * 0.6));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     setActiveTabIndex(initialTabIndex);
   }, [initialTabIndex]);
@@ -80,7 +92,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         return updated;
       });
     }
-  }, [activeTabIndex, currentTab.dataURL]);
+  }, [activeTabIndex, currentTab.dataURL, canvasHeight]);
 
   const getMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
@@ -234,13 +246,56 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
-    const updatedImages = tabs.map((tab) => tab.dataURL || null);
-    onSave(updatedImages);
+  // インラインスタイルまとめ
+  const modalStyle = {
+  height: '90vh',
+  maxWidth: 900,
+  padding: 20,
+  boxSizing: 'border-box',
+  display: 'flex',
+  flexDirection: 'column',
+  backgroundColor: 'white',
+  borderRadius: 12,
+  overflow: 'hidden', // はみ出し対策
+};
+
+  const canvasContainerStyle = {
+  border: '1px solid #916B5E',
+  borderRadius: 10,
+  boxShadow: '0 5px 10px rgba(0,0,0,0.1)',
+  margin: '10px 0 10px 0', // 上下マージンを狭く
+  width: 600,
+  height: canvasHeight,
+  display: 'block',
+  flexShrink: 0,
+};
+
+  const canvasStyle = {
+    flexGrow: 1,
+    borderRadius: 10,
+    display: 'block',
+    width: '100%',
+    height: '100%',
+    cursor: 'crosshair',
+  };
+
+  const toolAreaStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  marginBottom: 10,
+  flexWrap: 'wrap',
+  fontSize: '0.9rem',
+};
+
+  const actionButtonsStyle = {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: 10,
   };
 
   return (
-    <div style={{ padding: 20, textAlign: 'center' }}>
+    <div style={modalStyle}>
       {/* タブ切替 */}
       <div style={{ marginBottom: 10 }}>
         {tabs.map((tab, idx) => (
@@ -251,6 +306,11 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
               fontWeight: idx === activeTabIndex ? 'bold' : 'normal',
               marginRight: 10,
               minWidth: 30,
+              borderRadius: 6,
+              border: '1px solid #916B5E',
+              backgroundColor: idx === activeTabIndex ? '#f4e8e1' : 'white',
+              cursor: isDrawing ? 'not-allowed' : 'pointer',
+              padding: '6px 10px',
             }}
             disabled={isDrawing}
           >
@@ -260,25 +320,27 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       </div>
 
       {/* Canvas */}
-      <canvas
-        ref={canvasRef}
-        width={600}
-        height={300}
-        style={{ border: '1px solid black', cursor: 'crosshair', marginBottom: 10 }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      />
+      <div style={canvasContainerStyle}>
+        <canvas
+          ref={canvasRef}
+          width={600}
+          height={canvasHeight}
+          style={canvasStyle}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        />
+      </div>
 
       {/* ツール */}
-      <div style={{ marginBottom: 10 }}>
+      <div style={toolAreaStyle}>
         <label>
           ツール:
           <select
             value={tool}
             onChange={(e) => setTool(e.target.value)}
-            style={{ marginLeft: 10 }}
+            style={{ marginLeft: 10, borderRadius: 6, border: '1px solid #916B5E' }}
             disabled={isDrawing}
           >
             <option value="pen">ペン</option>
@@ -286,18 +348,26 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
           </select>
         </label>
 
-        <label style={{ marginLeft: 20 }}>
+        <label>
           色:
           <input
             type="color"
             value={color}
             onChange={(e) => setColor(e.target.value)}
             disabled={tool === 'eraser' || isDrawing}
-            style={{ marginLeft: 10 }}
+            style={{
+              marginLeft: 10,
+              width: 40,
+              height: 30,
+              border: '1px solid #916B5E',
+              borderRadius: 6,
+              padding: 0,
+              cursor: tool === 'eraser' || isDrawing ? 'not-allowed' : 'pointer',
+            }}
           />
         </label>
 
-        <label style={{ marginLeft: 20 }}>
+        <label style={{ display: 'flex', alignItems: 'center' }}>
           線幅:
           <input
             type="range"
@@ -306,36 +376,102 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
             value={lineWidth}
             onChange={(e) => setLineWidth(Number(e.target.value))}
             disabled={isDrawing}
-            style={{ verticalAlign: 'middle', marginLeft: 10 }}
+            style={{
+              verticalAlign: 'middle',
+              marginLeft: 10,
+              cursor: isDrawing ? 'not-allowed' : 'pointer',
+            }}
           />
           {lineWidth}
         </label>
-      </div>
 
-      {/* Undo, Redo, Clear */}
-      <div style={{ marginBottom: 10 }}>
-        <button onClick={handleUndo} disabled={histories[activeTabIndex]?.length <= 1 || isDrawing}>
+        {/* Undo, Redo, Clear ボタン */}
+        <button
+          onClick={handleUndo}
+          disabled={histories[activeTabIndex]?.length <= 1 || isDrawing}
+          style={{
+            marginLeft: 20,
+            padding: '6px 14px',
+            borderRadius: 6,
+            border: '1px solid #916B5E',
+            backgroundColor: 'white',
+            cursor:
+              histories[activeTabIndex]?.length <= 1 || isDrawing
+                ? 'not-allowed'
+                : 'pointer',
+          }}
+        >
           Undo
         </button>
-        <button onClick={handleRedo} disabled={redos[activeTabIndex]?.length === 0 || isDrawing} style={{ marginLeft: 10 }}>
+        <button
+          onClick={handleRedo}
+          disabled={redos[activeTabIndex]?.length === 0 || isDrawing}
+          style={{
+            marginLeft: 10,
+            padding: '6px 14px',
+            borderRadius: 6,
+            border: '1px solid #916B5E',
+            backgroundColor: 'white',
+            cursor:
+              redos[activeTabIndex]?.length === 0 || isDrawing
+                ? 'not-allowed'
+                : 'pointer',
+          }}
+        >
           Redo
         </button>
-        <button onClick={clearCanvas} disabled={isDrawing} style={{ marginLeft: 10 }}>
+        <button
+          onClick={clearCanvas}
+          disabled={isDrawing}
+          style={{
+            marginLeft: 10,
+            padding: '6px 14px',
+            borderRadius: 6,
+            border: '1px solid #916B5E',
+            backgroundColor: 'white',
+            cursor: isDrawing ? 'not-allowed' : 'pointer',
+          }}
+        >
           クリア
         </button>
-      </div>
 
-      {/* 画像アップロード */}
-      <div style={{ marginBottom: 20 }}>
-        <input type="file" accept="image/*" onChange={handleImageUpload} disabled={isDrawing} />
+        {/* 画像アップロード */}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          disabled={isDrawing}
+          style={{ marginLeft: 20, cursor: isDrawing ? 'not-allowed' : 'pointer' }}
+        />
       </div>
 
       {/* 操作ボタン */}
-      <div>
-        <button onClick={onCancel} disabled={isDrawing} style={{ marginRight: 20 }}>
+      <div style={actionButtonsStyle}>
+        <button
+          onClick={onCancel}
+          disabled={isDrawing}
+          style={{
+            padding: '6px 16px',
+            borderRadius: 6,
+            border: '1px solid #916B5E',
+            backgroundColor: 'white',
+            cursor: isDrawing ? 'not-allowed' : 'pointer',
+          }}
+        >
           キャンセル
         </button>
-        <button onClick={handleSave} disabled={isDrawing}>
+        <button
+          onClick={() => onSave(tabs)}
+          disabled={isDrawing}
+          style={{
+            padding: '6px 16px',
+            borderRadius: 6,
+            border: 'none',
+            backgroundColor: '#916B5E',
+            color: 'white',
+            cursor: isDrawing ? 'not-allowed' : 'pointer',
+          }}
+        >
           完了
         </button>
       </div>
