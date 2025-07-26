@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import { signOut } from 'firebase/auth';
@@ -8,11 +8,13 @@ import '../styles/Layout.css';
 const Layout = () => {
   const navigate = useNavigate();
   const { currentUser } = useContext(AuthContext);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
       navigate('/login');
+      setMenuOpen(false);
     } catch (err) {
       console.error('ログアウト失敗:', err);
     }
@@ -28,10 +30,22 @@ const Layout = () => {
         backgroundPosition: 'center',
       }}
     >
+      {/* ハンバーガーボタン（スマホのみ） */}
+      <button
+        className="hamburger-button"
+        onClick={() => setMenuOpen((prev) => !prev)}
+        aria-label="メニュー切替"
+      >
+        ☰
+      </button>
+
       {/* 左サイドバー */}
-      <div className="layout-left">
+      <div className={`layout-left ${menuOpen ? 'open' : ''}`}>
         <div
-          onClick={() => navigate('/')}
+          onClick={() => {
+            navigate('/');
+            setMenuOpen(false);
+          }}
           style={{
             fontWeight: 'bold',
             fontSize: '1.3rem',
@@ -57,7 +71,10 @@ const Layout = () => {
             backgroundColor: '#fff8f2',
           }}
           onClick={() => {
-            if (!currentUser) navigate('/login');
+            if (!currentUser) {
+              navigate('/login');
+              setMenuOpen(false);
+            }
           }}
         >
           {currentUser ? currentUser.email : 'ログイン'}
@@ -66,7 +83,10 @@ const Layout = () => {
         {currentUser && (
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <button
-              onClick={handleLogout}
+              onClick={() => {
+                handleLogout();
+                setMenuOpen(false);
+              }}
               style={{
                 padding: '8px 16px',
                 fontSize: '0.9rem',
@@ -97,12 +117,17 @@ const Layout = () => {
         </ul>
       </div>
 
-      {/* メイン */}
-      <div className="layout-main">
+      {/* メインコンテンツ */}
+      <div
+        className="layout-main"
+        onClick={() => {
+          if (menuOpen) setMenuOpen(false); // スマホ時、メインクリックでメニュー閉じる
+        }}
+      >
         <Outlet />
       </div>
 
-      {/* 右サイドバー */}
+      {/* 右サイドバー（スマホでは非表示） */}
       <div className="layout-right">
         <div
           style={{
