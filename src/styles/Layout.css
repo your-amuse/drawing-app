@@ -1,0 +1,27 @@
+.layout-container {
+  display: grid;
+  grid-template-columns: 220px 1fr 220px;
+  gap: 20px;
+  padding: 30px;
+  font-family: "Noto Serif JP", serif;
+  background-color: #fdfaf6;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background-image: url("/pageBack.jpg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
+/* スマホ向けレスポンシブ対応 */
+@media screen and (max-width: 768px) {
+  .layout-container {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .layout-left,
+  .layout-right {
+    display: none;
+  }
+}

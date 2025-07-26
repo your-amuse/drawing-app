@@ -1,9 +1,9 @@
-// src/components/Layout.js
 import React, { useContext } from 'react';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
+import '../styles/Layout.css'; // ← CSSを読み込む
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -19,24 +19,9 @@ const Layout = () => {
   };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '220px 1fr 220px',
-        gap: '20px',
-        padding: '30px',
-        fontFamily: '"Noto Serif JP", serif',
-        backgroundColor: '#fdfaf6',
-        minHeight: '100vh',
-        boxSizing: 'border-box',
-        backgroundImage: 'url("/pageBack.jpg")',
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
-    >
+    <div className="layout-container">
       {/* 左サイドバー */}
-      <div style={{ borderRight: '1px solid #e0d6c8', paddingRight: '15px' }}>
+      <div className="layout-left">
         <div
           onClick={() => navigate('/')}
           style={{
@@ -96,13 +81,13 @@ const Layout = () => {
         </ul>
       </div>
 
-      {/* メインコンテンツ */}
-      <div>
+      {/* メイン */}
+      <div className="layout-main">
         <Outlet />
       </div>
 
       {/* 右サイドバー */}
-      <div style={{ borderLeft: '1px solid #e0d6c8', paddingLeft: '15px', color: '#444', fontSize: '0.95rem' }}>
+      <div className="layout-right">
         <div
           style={{
             border: '1px solid #ccc',
