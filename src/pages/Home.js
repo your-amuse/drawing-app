@@ -37,7 +37,7 @@ const Home = () => {
           backgroundImage: 'url("/titleBack.png")',
         }}
       >
-        オーダーメイドストア
+        レイアウト修正版
       </div>
 
       <div className="home-announcements">

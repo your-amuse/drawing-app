@@ -1,3 +1,5 @@
+/* Layout.css */
+
 .layout-container {
   display: grid;
   grid-template-columns: 220px 1fr 220px;
@@ -13,15 +15,52 @@
   background-position: center;
 }
 
-/* スマホ向けレスポンシブ対応 */
+/* 左サイドバー */
+.layout-left {
+  border-right: 1px solid #e0d6c8;
+  padding-right: 15px;
+}
+
+/* メイン部分 */
+.layout-main {
+  /* ここは必要に応じて調整 */
+}
+
+/* 右サイドバー */
+.layout-right {
+  border-left: 1px solid #e0d6c8;
+  padding-left: 15px;
+  color: #444;
+  font-size: 0.95rem;
+}
+
+/* スマホなど狭い画面の時 */
 @media screen and (max-width: 768px) {
   .layout-container {
-    grid-template-columns: 1fr;
-    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    background-image: none;
   }
 
-  .layout-left,
+  .layout-left {
+    border-right: none;
+    padding-right: 0;
+    border-bottom: 1px solid #e0d6c8;
+    padding-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* ハンバーガーメニュー風にボタン表示させたいならここに追加 */
+  /* 今はまだボタンは無いので後で追加しましょう */
+
+  .layout-main {
+    margin-top: 15px;
+  }
+
   .layout-right {
-    display: none;
+    display: none; /* 右サイドバーは非表示 */
   }
 }
