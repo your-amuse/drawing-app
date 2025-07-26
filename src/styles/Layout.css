@@ -1,66 +1,53 @@
-.layout-container {
-  display: flex;
-  min-height: 100vh;
-  position: relative;
-}
-
-/* サイドバー（PC用） */
-.layout-left {
-  width: 220px;
-  background-color: #fdf8f5;
-  border-right: 1px solid #ccc;
-  padding: 20px 15px;
-  box-sizing: border-box;
-}
-
-/* メイン */
-.layout-main {
-  flex-grow: 1;
-  padding: 20px 15px;
-  box-sizing: border-box;
-  z-index: 1;
-}
-
-/* 右サイドバー（PC用） */
-.layout-right {
-  width: 220px;
-  background-color: #f9f9f9;
-  border-left: 1px solid #ccc;
-  padding: 20px 15px;
-  box-sizing: border-box;
-}
-
-/* ハンバーガーメニューアイコン（スマホのみ表示） */
-.hamburger-button {
+/* ヘッダー（スマホ表示） */
+.layout-header {
   display: none;
+  background-color: #fff;
+  height: 60px;
+  border-bottom: 1px solid #ddd;
   position: fixed;
-  top: 10px;
-  left: 10px;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  box-sizing: border-box;
+}
+
+.layout-logo {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #7d5a50;
+  cursor: pointer;
+}
+
+.layout-user {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.hamburger-button {
   font-size: 2rem;
-  background: transparent;
+  background: none;
   border: none;
   cursor: pointer;
-  z-index: 1000;
+  color: #333;
 }
 
-/* スマホ対応（幅768px以下） */
+/* スマホ用サイドバー挙動 */
 @media (max-width: 768px) {
   .layout-container {
-    flex-direction: column;
+    padding-top: 60px; /* ヘッダー分の余白を確保 */
   }
 
-  /* ハンバーガー表示 */
-  .hamburger-button {
-    display: block;
-  }
-
-  /* 左サイドバー → スライドメニュー化 */
   .layout-left {
     position: fixed;
-    top: 0;
+    top: 60px;
     left: -260px;
     width: 240px;
-    height: 100vh;
+    height: calc(100vh - 60px);
     background-color: #fdf8f5;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
     padding: 20px 15px;
@@ -74,13 +61,15 @@
     left: 0;
   }
 
-  /* 右サイドバーは非表示に */
   .layout-right {
     display: none;
   }
 
-  /* メインのパディング調整 */
   .layout-main {
     padding: 10px 15px;
+  }
+
+  .layout-header {
+    display: flex;
   }
 }
