@@ -1,0 +1,84 @@
+.hamburger-button {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1001;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-family: 'Noto Serif JP', serif;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #7d5a50;
+  user-select: none;
+}
+
+.hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 22px;
+  height: 18px;
+  margin-right: 8px;
+}
+
+.hamburger-icon span {
+  display: block;
+  height: 3px;
+  background-color: #7d5a50;
+  border-radius: 2px;
+}
+
+/* メニュー本体 */
+.hamburger-menu {
+  position: fixed;
+  top: 0;
+  left: -280px; /* 画面外へ隠す */
+  width: 280px;
+  height: 100vh;
+  background-color: #fff8f2;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+  padding: 20px;
+  box-sizing: border-box;
+  transition: left 0.3s ease;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+/* メニューが開いている時 */
+.hamburger-menu.open {
+  left: 0;
+}
+
+/* 閉じるボタン */
+.close-button {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #7d5a50;
+  cursor: pointer;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  user-select: none;
+}
+
+/* メニュー内のコンテンツ */
+.menu-content {
+  margin-top: 40px;
+  font-size: 1rem;
+  color: #7d5a50;
+}
+
+/* メニュー開いてる時の背景オーバーレイ */
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0,0,0,0.3);
+  z-index: 999;
+}
