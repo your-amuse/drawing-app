@@ -3,7 +3,7 @@ import { useNavigate, Outlet } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
-import '../styles/Layout.css'; // ← CSSを読み込む
+import '../styles/Layout.css';
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -19,7 +19,15 @@ const Layout = () => {
   };
 
   return (
-    <div className="layout-container">
+    <div
+      className="layout-container"
+      style={{
+        backgroundImage: 'url("/pageBack.jpg")',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       {/* 左サイドバー */}
       <div className="layout-left">
         <div
@@ -74,7 +82,15 @@ const Layout = () => {
           </div>
         )}
 
-        <ul style={{ listStyle: 'none', padding: 0, fontSize: '0.95rem', color: '#444', lineHeight: '1.8' }}>
+        <ul
+          style={{
+            listStyle: 'none',
+            padding: 0,
+            fontSize: '0.95rem',
+            color: '#444',
+            lineHeight: '1.8',
+          }}
+        >
           <li style={{ cursor: 'pointer' }}>ユーザー情報</li>
           <li style={{ cursor: 'pointer' }}>チャットルーム</li>
           <li style={{ cursor: 'pointer' }}>お問い合わせ</li>
@@ -99,7 +115,10 @@ const Layout = () => {
             cursor: 'pointer',
           }}
         >
-          <a href="/ranking" style={{ color: '#7d5a50', textDecoration: 'underline' }}>
+          <a
+            href="/ranking"
+            style={{ color: '#7d5a50', textDecoration: 'underline' }}
+          >
             人気商品ランキング
           </a>
         </div>

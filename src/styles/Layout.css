@@ -1,66 +1,43 @@
-/* Layout.css */
-
 .layout-container {
-  display: grid;
-  grid-template-columns: 220px 1fr 220px;
-  gap: 20px;
-  padding: 30px;
-  font-family: "Noto Serif JP", serif;
-  background-color: #fdfaf6;
+  display: flex;
   min-height: 100vh;
-  box-sizing: border-box;
-  background-image: url("/pageBack.jpg");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
+  /* background-imageはJSで指定しているのでここからは削除 */
 }
 
-/* 左サイドバー */
 .layout-left {
-  border-right: 1px solid #e0d6c8;
-  padding-right: 15px;
+  width: 220px;
+  background-color: #fdf8f5;
+  border-right: 1px solid #ccc;
+  padding: 20px 15px;
+  box-sizing: border-box;
 }
 
-/* メイン部分 */
 .layout-main {
-  /* ここは必要に応じて調整 */
+  flex-grow: 1;
+  padding: 20px 15px;
+  box-sizing: border-box;
 }
 
-/* 右サイドバー */
 .layout-right {
-  border-left: 1px solid #e0d6c8;
-  padding-left: 15px;
-  color: #444;
-  font-size: 0.95rem;
+  width: 220px;
+  background-color: #f9f9f9;
+  border-left: 1px solid #ccc;
+  padding: 20px 15px;
+  box-sizing: border-box;
 }
 
-/* スマホなど狭い画面の時 */
-@media screen and (max-width: 768px) {
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
   .layout-container {
-    display: flex;
     flex-direction: column;
-    padding: 15px;
-    background-image: none;
   }
-
-  .layout-left {
-    border-right: none;
-    padding-right: 0;
-    border-bottom: 1px solid #e0d6c8;
-    padding-bottom: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  /* ハンバーガーメニュー風にボタン表示させたいならここに追加 */
-  /* 今はまだボタンは無いので後で追加しましょう */
-
-  .layout-main {
-    margin-top: 15px;
-  }
-
+  .layout-left,
   .layout-right {
-    display: none; /* 右サイドバーは非表示 */
+    width: 100%;
+    border: none;
+    padding: 10px 15px;
+  }
+  .layout-main {
+    padding: 10px 15px;
   }
 }
