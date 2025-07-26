@@ -1,9 +1,10 @@
-// src/pages/Home.js
+// Home.js
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
+import '../styles/Home.css'; // CSSファイルを読み込み
 
 const announcements = [
   { id: 1, title: '新商品発売！', date: '2025-07-10', link: '/lp/new-product' },
@@ -29,90 +30,37 @@ const Home = () => {
   };
 
   return (
-    <div style={{
-      padding: '30px',
-      fontFamily: '"Noto Serif JP", serif',
-      backgroundColor: '#fdfaf6',
-      boxSizing: 'border-box',
-      minHeight: '100vh',
-      maxWidth: '900px',
-      margin: '0 auto',
-    }}>
-      <div style={{
-        backgroundImage: 'url("/titleBack.png")',
-        backgroundSize: 'cover',
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center',
-        padding: '40px 20px',
-        textAlign: 'center',
-        fontFamily: '"Playfair Display", serif',
-        fontSize: '2.8rem',
-        color: '#222',
-        marginBottom: '20px',
-        borderBottom: '2px solid #ccc',
-        boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
-      }}>
+    <div className="home-container">
+      <div
+        className="home-header"
+        style={{
+          backgroundImage: 'url("/titleBack.png")',
+        }}
+      >
         オーダーメイドストア
       </div>
 
-      <div style={{
-        backgroundColor: '#fff',
-        border: '1px solid #eae2d0',
-        borderRadius: '12px',
-        padding: '20px',
-        marginBottom: '30px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-      }}>
-        <h3 style={{ marginBottom: '10px', fontWeight: 'normal', color: '#555' }}>最新のお知らせ</h3>
-        <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+      <div className="home-announcements">
+        <h3>最新のお知らせ</h3>
+        <div className="home-announcement-list">
           {sortedAnnouncements.map(({ id, title, date, link }) => (
-            <div 
+            <div
               key={id}
               onClick={() => navigate(link)}
-              style={{
-                cursor: 'pointer',
-                marginBottom: '10px',
-                color: '#7d5a50',
-                textDecoration: 'underline',
-                fontSize: '1rem'
-              }}
+              className="home-announcement-item"
             >
-              {title} <span style={{ fontSize: '0.85rem', color: '#999' }}>（{date}）</span>
+              {title} <span className="home-announcement-date">（{date}）</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{
-        border: '2px dashed #d4c8b0',
-        backgroundColor: '#fffaf2',
-        height: '250px',
-        marginBottom: '30px',
-        borderRadius: '12px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '1.1rem',
-        color: '#aaa'
-      }}>
+      <div className="home-image-placeholder">
         説明用のイメージが入ります
       </div>
 
-      <div style={{ textAlign: 'center' }}>
-        <button 
-          onClick={() => navigate('/order')}
-          style={{
-            padding: '14px 48px',
-            fontSize: '1.2rem',
-            fontFamily: '"Playfair Display", serif',
-            borderRadius: '28px',
-            border: 'none',
-            backgroundColor: '#7d5a50',
-            color: '#fff',
-            cursor: 'pointer',
-            boxShadow: '0 4px 10px rgba(125, 90, 80, 0.3)'
-          }}
-        >
+      <div className="home-button-area">
+        <button onClick={() => navigate('/order')} className="home-order-button">
           オーダーメイドを始める
         </button>
       </div>
