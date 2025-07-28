@@ -41,9 +41,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    setActiveTabIndex(initialTabIndex);
-  }, [initialTabIndex]);
+  useEffect(() => setActiveTabIndex(initialTabIndex), [initialTabIndex]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -69,15 +67,21 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     };
 
     const current = tabs[activeTabIndex];
-    current?.dataURL ? drawImage(current.dataURL) :
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    current?.dataURL
+      ? drawImage(current.dataURL)
+      : ctx.clearRect(0, 0, canvas.width, canvas.height);
   }, [activeTabIndex, canvasHeight, tabs]);
 
   const getRelativePos = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
     };
   };
 
@@ -216,7 +220,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
 
   return (
     <div style={{ padding: 10, height: '90vh', overflow: 'auto' }}>
-      {/* タブ切り替え（既存と同じ） */}
+      {/* タブ切り替え */}
       <div style={{ marginBottom: 8 }}>
         {tabs.map((tab, idx) => (
           <button
@@ -238,7 +242,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         ))}
       </div>
 
-      {/* キャンバス部分 */}
+      {/* キャンバス */}
       <div
         style={{
           border: '1px solid #aaa',
@@ -267,7 +271,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         />
       </div>
 
-      {/* ツールバー（既存と同じ） */}
+      {/* ツールバー */}
       <div
         style={{
           display: 'flex',
@@ -278,7 +282,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
           marginBottom: 10,
         }}
       >
-        {/* ツール選択 */}
         <select
           value={tool}
           onChange={(e) => setTool(e.target.value)}
@@ -289,7 +292,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
           <option value="eraser">🧽 消しゴム</option>
         </select>
 
-        {/* 色選択 */}
         <label title="色">
           🎨
           <input
@@ -301,7 +303,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
           />
         </label>
 
-        {/* 線幅 */}
         <label title="線の太さ" style={{ display: 'flex', alignItems: 'center' }}>
           ●
           <input
@@ -315,7 +316,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
           />
         </label>
 
-        {/* Undo / Redo / Clear */}
         <button onClick={handleUndo} disabled={isDrawing || histories[activeTabIndex].length <= 1}>
           ↩️
         </button>
@@ -326,7 +326,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
           🧹
         </button>
 
-        {/* 画像アップロード */}
         <label>
           📁
           <input
@@ -347,7 +346,13 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         <button
           onClick={() => onSave(tabs)}
           disabled={isDrawing}
-          style={{ background: '#916B5E', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 6 }}
+          style={{
+            background: '#916B5E',
+            color: 'white',
+            border: 'none',
+            padding: '6px 12px',
+            borderRadius: 6,
+          }}
         >
           完了
         </button>
