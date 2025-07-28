@@ -24,17 +24,26 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   const [lineWidth, setLineWidth] = useState(2);
 
   const canvasRef = useRef(null);
-  const [histories, setHistories] = useState(() => Array(MAX_TABS).fill().map(() => []));
-  const [redos, setRedos] = useState(() => Array(MAX_TABS).fill().map(() => []));
+  const [histories, setHistories] = useState(() =>
+    Array(MAX_TABS).fill().map(() => [])
+  );
+  const [redos, setRedos] = useState(() =>
+    Array(MAX_TABS).fill().map(() => [])
+  );
 
-  const [canvasHeight, setCanvasHeight] = useState(() => Math.floor(window.innerHeight * 0.5));
+  const [canvasHeight, setCanvasHeight] = useState(() =>
+    Math.floor(window.innerHeight * 0.5)
+  );
   useEffect(() => {
-    const handleResize = () => setCanvasHeight(Math.floor(window.innerHeight * 0.6));
+    const handleResize = () =>
+      setCanvasHeight(Math.floor(window.innerHeight * 0.6));
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => setActiveTabIndex(initialTabIndex), [initialTabIndex]);
+  useEffect(() => {
+    setActiveTabIndex(initialTabIndex);
+  }, [initialTabIndex]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -48,7 +57,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       img.onload = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setHistories(prev => {
+        setHistories((prev) => {
           const updated = [...prev];
           if (updated[activeTabIndex].length === 0) {
             updated[activeTabIndex] = [canvas.toDataURL()];
@@ -59,30 +68,29 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       img.src = imgSrc;
     };
 
-    currentTab?.dataURL ? drawImage(currentTab.dataURL) : ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }, [activeTabIndex, canvasHeight]);
+    const current = tabs[activeTabIndex];
+    current?.dataURL ? drawImage(current.dataURL) :
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }, [activeTabIndex, canvasHeight, tabs]);
 
-  const currentTab = tabs[activeTabIndex];
-
-  const getMousePos = (e) => {
+  const getRelativePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
   };
 
-  const getTouchPos = (touch) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-  };
-
-  const handleMouseDown = (e) => {
+  const handlePointerDown = (e) => {
+    e.preventDefault();
     setIsDrawing(true);
-    setLastPos(getMousePos(e));
+    setLastPos(getRelativePos(e));
   };
 
-  const handleMouseMove = (e) => {
+  const handlePointerMove = (e) => {
     if (!isDrawing) return;
     const ctx = canvasRef.current.getContext('2d');
-    const newPos = getMousePos(e);
+    const newPos = getRelativePos(e);
     ctx.beginPath();
     ctx.moveTo(lastPos.x, lastPos.y);
     ctx.lineTo(newPos.x, newPos.y);
@@ -92,65 +100,40 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     setLastPos(newPos);
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     if (!isDrawing) return;
     setIsDrawing(false);
     saveCanvasToTab();
   };
 
-  const handleTouchStart = (e) => {
-    if (e.touches.length > 0) {
-      const touch = e.touches[0];
-      setIsDrawing(true);
-      setLastPos(getTouchPos(touch));
-    }
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isDrawing || e.touches.length === 0) return;
-    const ctx = canvasRef.current.getContext('2d');
-    const touch = e.touches[0];
-    const newPos = getTouchPos(touch);
-    ctx.beginPath();
-    ctx.moveTo(lastPos.x, lastPos.y);
-    ctx.lineTo(newPos.x, newPos.y);
-    ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
-    ctx.lineWidth = lineWidth;
-    ctx.stroke();
-    setLastPos(newPos);
-    e.preventDefault(); // ← 重要：スクロール防止
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDrawing) return;
-    setIsDrawing(false);
-    saveCanvasToTab();
+  const handlePointerLeave = () => {
+    if (isDrawing) handlePointerUp();
   };
 
   const saveCanvasToTab = () => {
     const canvas = canvasRef.current;
     const dataURL = canvas.toDataURL();
-    setTabs(prev => {
+    setTabs((prev) => {
       const updated = [...prev];
       updated[activeTabIndex] = { ...updated[activeTabIndex], dataURL };
       return updated;
     });
-    setHistories(prev => {
+    setHistories((prev) => {
       const updated = [...prev];
       const history = [...updated[activeTabIndex], dataURL];
       if (history.length > MAX_HISTORY) history.shift();
       updated[activeTabIndex] = history;
       return updated;
     });
-    setRedos(prev => {
+    setRedos((prev) => {
       const updated = [...prev];
       updated[activeTabIndex] = [];
       return updated;
     });
   };
 
-  const restoreCanvas = (dataURL) => {
-    return new Promise((resolve) => {
+  const restoreCanvas = (dataURL) =>
+    new Promise((resolve) => {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       const img = new Image();
@@ -161,26 +144,25 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       };
       img.src = dataURL;
     });
-  };
 
   const handleUndo = async () => {
     const history = histories[activeTabIndex];
     if (history.length <= 1) return;
     const newHistory = [...history];
     const last = newHistory.pop();
-    setRedos(prev => {
+    setRedos((prev) => {
       const updated = [...prev];
       updated[activeTabIndex] = [last, ...updated[activeTabIndex]];
       return updated;
     });
     const prevDataURL = newHistory[newHistory.length - 1];
     await restoreCanvas(prevDataURL);
-    setTabs(prev => {
+    setTabs((prev) => {
       const updated = [...prev];
       updated[activeTabIndex] = { ...updated[activeTabIndex], dataURL: prevDataURL };
       return updated;
     });
-    setHistories(prev => {
+    setHistories((prev) => {
       const updated = [...prev];
       updated[activeTabIndex] = newHistory;
       return updated;
@@ -192,17 +174,17 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     if (redoStack.length === 0) return;
     const [first, ...rest] = redoStack;
     await restoreCanvas(first);
-    setTabs(prev => {
+    setTabs((prev) => {
       const updated = [...prev];
       updated[activeTabIndex] = { ...updated[activeTabIndex], dataURL: first };
       return updated;
     });
-    setHistories(prev => {
+    setHistories((prev) => {
       const updated = [...prev];
       updated[activeTabIndex] = [...updated[activeTabIndex], first];
       return updated;
     });
-    setRedos(prev => {
+    setRedos((prev) => {
       const updated = [...prev];
       updated[activeTabIndex] = rest;
       return updated;
@@ -210,9 +192,8 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   };
 
   const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     saveCanvasToTab();
   };
 
@@ -223,10 +204,9 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const ctx = canvasRef.current.getContext('2d');
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
         saveCanvasToTab();
       };
       img.src = event.target.result;
@@ -236,11 +216,13 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
 
   return (
     <div style={{ padding: 10, height: '90vh', overflow: 'auto' }}>
+      {/* タブ切り替え（既存と同じ） */}
       <div style={{ marginBottom: 8 }}>
         {tabs.map((tab, idx) => (
           <button
             key={tab.id}
             onClick={() => setActiveTabIndex(idx)}
+            disabled={isDrawing}
             style={{
               fontWeight: idx === activeTabIndex ? 'bold' : 'normal',
               marginRight: 6,
@@ -250,13 +232,13 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
               background: idx === activeTabIndex ? '#f0e7e3' : '#fff',
               cursor: isDrawing ? 'not-allowed' : 'pointer',
             }}
-            disabled={isDrawing}
           >
             {tab.name}
           </button>
         ))}
       </div>
 
+      {/* キャンバス部分 */}
       <div
         style={{
           border: '1px solid #aaa',
@@ -276,20 +258,100 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
             display: 'block',
             borderRadius: 10,
             cursor: 'crosshair',
-            touchAction: 'none', // ← 重要: タッチイベント処理の競合防止
+            touchAction: 'none',
           }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerLeave}
         />
       </div>
 
-      {/* 以下、ツールバー・完了・キャンセルボタンは元のコードと同じ */}
-      {/* ...省略部分... */}
+      {/* ツールバー（既存と同じ） */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          marginBottom: 10,
+        }}
+      >
+        {/* ツール選択 */}
+        <select
+          value={tool}
+          onChange={(e) => setTool(e.target.value)}
+          disabled={isDrawing}
+          style={{ padding: 6, borderRadius: 6 }}
+        >
+          <option value="pen">✏️ ペン</option>
+          <option value="eraser">🧽 消しゴム</option>
+        </select>
+
+        {/* 色選択 */}
+        <label title="色">
+          🎨
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            disabled={tool === 'eraser' || isDrawing}
+            style={{ marginLeft: 4, width: 36, height: 36, border: 'none' }}
+          />
+        </label>
+
+        {/* 線幅 */}
+        <label title="線の太さ" style={{ display: 'flex', alignItems: 'center' }}>
+          ●
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={lineWidth}
+            onChange={(e) => setLineWidth(Number(e.target.value))}
+            disabled={isDrawing}
+            style={{ marginLeft: 6 }}
+          />
+        </label>
+
+        {/* Undo / Redo / Clear */}
+        <button onClick={handleUndo} disabled={isDrawing || histories[activeTabIndex].length <= 1}>
+          ↩️
+        </button>
+        <button onClick={handleRedo} disabled={isDrawing || redos[activeTabIndex].length === 0}>
+          ↪️
+        </button>
+        <button onClick={clearCanvas} disabled={isDrawing}>
+          🧹
+        </button>
+
+        {/* 画像アップロード */}
+        <label>
+          📁
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            disabled={isDrawing}
+            style={{ display: 'none' }}
+          />
+        </label>
+      </div>
+
+      {/* 完了・キャンセル */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+        <button onClick={onCancel} disabled={isDrawing}>
+          キャンセル
+        </button>
+        <button
+          onClick={() => onSave(tabs)}
+          disabled={isDrawing}
+          style={{ background: '#916B5E', color: 'white', border: 'none', padding: '6px 12px', borderRadius: 6 }}
+        >
+          完了
+        </button>
+      </div>
     </div>
   );
 };
