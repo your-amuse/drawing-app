@@ -6,6 +6,27 @@ import { AuthContext } from '../AuthContext';
 import LoginModal from './LoginModal';
 import PageWrapper from './PageWrapper';
 
+const categoryFields = {
+  tops: {
+    length: 60,
+    width: 50,
+    shoulder: 40,
+    sleeve: 60,
+  },
+  bottoms: {
+    waist: 70,
+    hip: 90,
+    inseam: 70,
+    rise: 25,
+  },
+  dress: {
+    length: 110,
+    width: 45,
+    shoulder: 38,
+    sleeve: 50,
+  },
+};
+
 const Order = () => {
   const { orderData, setOrderData } = useOrder();
   const { currentUser } = useContext(AuthContext);
@@ -13,6 +34,7 @@ const Order = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [shouldNavigateAfterLogin, setShouldNavigateAfterLogin] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [category, setCategory] = useState('tops');
   const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 600);
@@ -29,7 +51,7 @@ const Order = () => {
       document.addEventListener('touchmove', preventTouchMove, { passive: false });
       return () => {
         document.body.style.overflow = '';
-        document.removeEventListener('touchmove', preventTouchMove, { passive: false });
+        document.removeEventListener('touchmove', preventTouchMove);
       };
     } else {
       document.body.style.overflow = '';
@@ -44,6 +66,15 @@ const Order = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setOrderData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCategoryChange = (e) => {
+    const newCategory = e.target.value;
+    setCategory(newCategory);
+    setOrderData(prev => ({
+      ...prev,
+      ...categoryFields[newCategory]
+    }));
   };
 
   const handleSubmit = (e) => {
@@ -103,24 +134,25 @@ const Order = () => {
 
   const thumbnailGridStyle = {
     display: 'grid',
-    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-    gridAutoRows: '120px',
-    gap: '12px',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateRows: 'repeat(2, 160px)',
+    gap: '16px',
     marginBottom: '30px',
-    maxWidth: isMobile ? '100%' : '480px',
+    maxWidth: '420px',
   };
 
   const imageBoxStyle = {
     backgroundColor: '#fff',
-    border: '2px solid #ddd',
-    borderRadius: '10px',
-    padding: '6px',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+    border: '3px solid #999',
+    borderRadius: '14px',
+    padding: '8px',
+    boxShadow: '0 6px 15px rgba(0,0,0,0.2)',
     cursor: 'pointer',
     overflow: 'hidden',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    transition: 'transform 0.2s ease',
   };
 
   const buttonStyle = {
@@ -139,11 +171,27 @@ const Order = () => {
     transition: 'background-color 0.3s ease',
   };
 
+  const renderSizeInputs = () => {
+    const fields = categoryFields[category];
+    return Object.keys(fields).map((key) => (
+      <div key={key}>
+        <label style={labelStyle}>{key}（cm）</label>
+        <input
+          type="number"
+          name={key}
+          value={orderData[key] || ''}
+          onChange={handleChange}
+          style={inputStyle}
+        />
+      </div>
+    ));
+  };
+
   return (
     <PageWrapper currentStep={0} title="フルオーダー依頼">
-      <label style={labelStyle}>参考画像（最大5枚）</label>
+      <label style={labelStyle}>参考画像（最大4枚）</label>
       <div style={thumbnailGridStyle}>
-        {Array.from({ length: 5 }).map((_, index) => (
+        {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
             style={imageBoxStyle}
@@ -176,46 +224,23 @@ const Order = () => {
               style={inputStyle}
             />
           </div>
-          <div>
-            <label style={labelStyle}>着丈（cm）</label>
-            <input
-              type="number"
-              name="length"
-              value={orderData.length || ''}
-              onChange={handleChange}
+
+          <div style={fullWidthStyle}>
+            <label style={labelStyle}>カテゴリ</label>
+            <select
+              name="category"
+              value={category}
+              onChange={handleCategoryChange}
               style={inputStyle}
-            />
+            >
+              <option value="tops">トップス</option>
+              <option value="bottoms">ボトムス</option>
+              <option value="dress">ワンピース</option>
+            </select>
           </div>
-          <div>
-            <label style={labelStyle}>身幅（cm）</label>
-            <input
-              type="number"
-              name="width"
-              value={orderData.width || ''}
-              onChange={handleChange}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>肩幅（cm）</label>
-            <input
-              type="number"
-              name="shoulder"
-              value={orderData.shoulder || ''}
-              onChange={handleChange}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>袖丈（cm）</label>
-            <input
-              type="number"
-              name="sleeve"
-              value={orderData.sleeve || ''}
-              onChange={handleChange}
-              style={inputStyle}
-            />
-          </div>
+
+          {renderSizeInputs()}
+
           <div style={fullWidthStyle}>
             <label style={labelStyle}>希望素材</label>
             <input
@@ -226,6 +251,7 @@ const Order = () => {
               style={inputStyle}
             />
           </div>
+
           <div style={fullWidthStyle}>
             <label style={labelStyle}>フィット感</label>
             <select
@@ -244,7 +270,6 @@ const Order = () => {
         <button type="submit" style={buttonStyle}>依頼する</button>
       </form>
 
-      {/* Canvasモーダル */}
       {isCanvasVisible && (
         <div
           style={{
@@ -266,9 +291,9 @@ const Order = () => {
             style={{
               background: '#fff',
               padding: 20,
-              width: '90%',
-              maxWidth: 850,
-              maxHeight: '90vh',
+              width: '100%',
+              maxWidth: 1000,
+              maxHeight: '100vh',
               borderRadius: '12px',
               overflow: 'hidden',
               boxShadow: '0 0 20px rgba(0,0,0,0.3)',
@@ -287,7 +312,6 @@ const Order = () => {
         </div>
       )}
 
-      {/* ログインモーダル */}
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
