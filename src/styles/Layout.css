@@ -71,6 +71,11 @@
   padding: 0 15px;
   box-sizing: border-box;
   font-family: "Noto Serif JP", serif;
+  transition: transform 0.3s ease;
+}
+
+.layout-header.hidden {
+  transform: translateY(-100%);
 }
 
 .layout-logo {
@@ -112,14 +117,29 @@
   background-color: #f2e3db;
 }
 
+/* ==== ハンバーガーメニュー縦表示 ==== */
 .hamburger-button {
-  font-size: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
   background: none;
   border: none;
   cursor: pointer;
   color: #333;
   user-select: none;
   font-family: "Noto Serif JP", serif;
+}
+
+.hamburger-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.hamburger-label {
+  font-size: 0.75rem;
+  margin-top: 2px;
 }
 
 /* ==== オーバーレイ ==== */

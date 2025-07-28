@@ -10,6 +10,7 @@ const Layout = () => {
   const { currentUser } = useContext(AuthContext);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
 
   useEffect(() => {
     const checkTouch = () => {
@@ -19,6 +20,24 @@ const Layout = () => {
     window.addEventListener('resize', checkTouch);
     return () => window.removeEventListener('resize', checkTouch);
   }, []);
+
+  useEffect(() => {
+    if (!isTouchDevice) return;
+
+    let lastScrollTop = 0;
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      if (scrollTop > lastScrollTop) {
+        setShowHeader(false);
+      } else {
+        setShowHeader(true);
+      }
+      lastScrollTop = Math.max(scrollTop, 0);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isTouchDevice]);
 
   const handleLogout = async () => {
     try {
@@ -38,7 +57,11 @@ const Layout = () => {
     <>
       {isTouchDevice && (
         <>
-          <header className="layout-header">
+          <header className={`layout-header ${showHeader ? '' : 'hidden'}`}>
+            <button className="hamburger-button" onClick={toggleSidebar} aria-label="メニュー開閉">
+              <span className="hamburger-icon">≡</span>
+              <span className="hamburger-label">menu</span>
+            </button>
             <div className="layout-logo" onClick={() => { navigate('/'); setSidebarOpen(false); }}>
               オーダーメイドストア
             </div>
@@ -51,9 +74,6 @@ const Layout = () => {
                 </button>
               )}
             </div>
-            <button className="hamburger-button" onClick={toggleSidebar} aria-label="メニュー開閉">
-              &#9776; menu
-            </button>
           </header>
 
           <nav className={`layout-left-mobile ${sidebarOpen ? 'open' : ''}`}>

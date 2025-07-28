@@ -37,7 +37,7 @@ const Home = () => {
           backgroundImage: 'url("/titleBack.png")',
         }}
       >
-        キャンバスレイアウト修正版3
+        ツールバータッチ修正版
       </div>
 
       <div className="home-announcements">
