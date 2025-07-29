@@ -23,6 +23,7 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(2);
+  const [zoom, setZoom] = useState(1); // 👈 追加
 
   const canvasRef = useRef(null);
   const [histories, setHistories] = useState(() => Array(MAX_TABS).fill().map(() => []));
@@ -31,7 +32,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   const [canvasSize, setCanvasSize] = useState(600);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
-  // 判定: coarseは指操作のタッチ端末（スマホ・タブレット）
   useEffect(() => {
     setIsTouchDevice(window.matchMedia('(pointer: coarse)').matches);
   }, []);
@@ -52,24 +52,44 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     ctx.lineCap = 'round';
 
     const drawImage = (src) => {
-      const img = new Image();
-      img.onload = () => {
-        resizeCanvasToImage(img);
-        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-        const w = img.width * scale;
-        const h = img.height * scale;
-        const ox = (canvas.width - w) / 2;
-        const oy = (canvas.height - h) / 2;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, ox, oy, w, h);
-        setHistories(prev => {
-          const copy = [...prev];
-          if (!copy[activeTabIndex]?.length) copy[activeTabIndex] = [canvas.toDataURL()];
-          return copy;
-        });
-      };
-      img.src = src;
-    };
+  const img = new Image();
+  img.onload = () => {
+    resizeCanvasToImage(img);
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    // キャンバスはすでに正方形で canvasSize x canvasSize
+    const canvasSize = canvas.width; // 高さも同じ
+
+    // 画像のアスペクト比
+    const imgRatio = img.width / img.height;
+
+    let w, h;
+    if (imgRatio > 1) {
+      // 横長
+      w = canvasSize;
+      h = canvasSize / imgRatio;
+    } else {
+      // 縦長または正方形
+      h = canvasSize;
+      w = canvasSize * imgRatio;
+    }
+
+    const ox = (canvasSize - w) / 2;
+    const oy = (canvasSize - h) / 2;
+
+    ctx.clearRect(0, 0, canvasSize, canvasSize);
+    ctx.drawImage(img, ox, oy, w, h);
+
+    setHistories(prev => {
+      const copy = [...prev];
+      if (!copy[activeTabIndex]?.length) copy[activeTabIndex] = [canvas.toDataURL()];
+      return copy;
+    });
+  };
+  img.src = src;
+};
+
 
     const current = tabs[activeTabIndex];
     if (current?.dataURL) drawImage(current.dataURL);
@@ -77,20 +97,33 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
   }, [activeTabIndex, tabs, canvasSize]);
 
   const getPos = (e) => {
-    const r = canvasRef.current.getBoundingClientRect();
-    return {
-      x: (e.clientX - r.left) * (canvasRef.current.width / r.width),
-      y: (e.clientY - r.top) * (canvasRef.current.height / r.height),
-    };
+  const r = canvasRef.current.getBoundingClientRect();
+  const scaleX = canvasRef.current.width / r.width;
+  const scaleY = canvasRef.current.height / r.height;
+  return {
+    x: (e.clientX - r.left) * scaleX,
+    y: (e.clientY - r.top) * scaleY,
   };
+};
 
-  const handlePointerDown = e => {
+  const handlePointerDown = (e) => {
     e.preventDefault();
+    const pos = getPos(e);
+
+    if (tool === 'eyedropper') {
+      const ctx = canvasRef.current.getContext('2d');
+      const pixel = ctx.getImageData(pos.x, pos.y, 1, 1).data;
+      const pickedColor = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
+      setColor(pickedColor);
+      setTool('pen'); // 自動でペンに戻す
+      return;
+    }
+
     setIsDrawing(true);
-    setLastPos(getPos(e));
+    setLastPos(pos);
   };
 
-  const handlePointerMove = e => {
+  const handlePointerMove = (e) => {
     if (!isDrawing) return;
     const ctx = canvasRef.current.getContext('2d');
     const np = getPos(e);
@@ -224,7 +257,6 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
     };
     reader.readAsDataURL(file);
   };
-
   return (
     <div style={{
       position: 'relative',
@@ -239,10 +271,10 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
       overflow: 'hidden',
       borderRadius: 12,
     }}>
-      {/* 完了・キャンセルボタンの位置（タッチ端末なら右上、それ以外は右下） */}
+      {/* 完了・キャンセルボタン */}
       <div style={{
         position: 'absolute',
-        ...(isTouchDevice ? { top: 10, right: 10 } : { bottom: 10, right: 10 }),
+        ...(isTouchDevice ? { top: 10, right: 10 } : { bottom: 0, right: 5 }),
         display: 'flex',
         gap: 12,
         zIndex: 1000,
@@ -257,8 +289,43 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         </button>
       </div>
 
-      {/* タブボタン */}
-      <div style={{ margin: '10px 0 8px', textAlign: 'center' }}>
+      {/* ツールバー（画面上部） */}
+      <div style={{
+        padding: 10,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 12,
+        borderBottom: '1px solid #ccc',
+      }}>
+        <button onClick={() => setTool('pen')} disabled={isDrawing}
+          style={{ background: tool === 'pen' ? '#eee' : '#fff', padding: 6, borderRadius: 6 }}>
+          ✏️
+        </button>
+        <button onClick={() => setTool('eraser')} disabled={isDrawing}
+          style={{ background: tool === 'eraser' ? '#eee' : '#fff', padding: 6, borderRadius: 6 }}>
+          🧽
+        </button>
+        <button onClick={() => setTool('eyedropper')} disabled={isDrawing}
+          style={{ background: tool === 'eyedropper' ? '#eee' : '#fff', padding: 6, borderRadius: 6 }}>
+          🎯
+        </button>
+        <input type="color" value={color} disabled={tool === 'eraser' || tool === 'eyedropper' || isDrawing}
+          onChange={e => setColor(e.target.value)} />
+        <input type="range" min="1" max="10" value={lineWidth}
+          onChange={e => setLineWidth(Number(e.target.value))} disabled={isDrawing} />
+        <button onClick={handleUndo} disabled={isDrawing || histories[activeTabIndex].length <= 1}>↩️</button>
+        <button onClick={handleRedo} disabled={isDrawing || redos[activeTabIndex].length === 0}>↪️</button>
+        <button onClick={clearCanvas} disabled={isDrawing}>🗑️</button>
+        <label style={{ cursor: 'pointer', background: '#ddd', padding: '6px 10px', borderRadius: 6 }}>
+          📷
+          <input type="file" accept="image/*"
+            onChange={handleImageUpload} disabled={isDrawing} style={{ display: 'none' }} />
+        </label>
+      </div>
+
+      {/* タブ切り替え */}
+      <div style={{ margin: '8px 0', textAlign: 'center' }}>
         {tabs.map((tab, idx) => (
           <button key={tab.id} onClick={() => setActiveTabIndex(idx)} disabled={isDrawing}
             style={{
@@ -284,47 +351,42 @@ const Canvas = ({ onCancel, onSave, initialTabIndex = 0 }) => {
         margin: '0 auto 10px',
         position: 'relative',
         touchAction: 'none',
-      }}>
-        <canvas ref={canvasRef}
-          width={canvasSize}
-          height={canvasSize}
-          style={{
-            display: 'block',
-            borderRadius: 10,
-            cursor: 'crosshair',
-          }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerLeave}
-        />
-      </div>
-
-      {/* ツールバー */}
-      <div style={{
-        padding: 8,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 12,
-        marginBottom: 10,
       }}>
-        <select value={tool} onChange={e => setTool(e.target.value)} disabled={isDrawing}>
-          <option value="pen">✏️ ペン</option>
-          <option value="eraser">🧽 消しゴム</option>
-        </select>
-        <input type="color" value={color} disabled={tool === 'eraser' || isDrawing}
-          onChange={e => setColor(e.target.value)} />
-        <input type="range" min="1" max="10" value={lineWidth}
-          onChange={e => setLineWidth(Number(e.target.value))} disabled={isDrawing} />
-        <button onClick={handleUndo} disabled={isDrawing || histories[activeTabIndex].length <= 1}>↩️</button>
-        <button onClick={handleRedo} disabled={isDrawing || redos[activeTabIndex].length === 0}>↪️</button>
-        <button onClick={clearCanvas} disabled={isDrawing}>🗑️</button>
-        <label style={{ cursor: 'pointer', background: '#ddd', padding: '6px 10px', borderRadius: 6 }}>
-          📷 画像アップロード
-          <input type="file" accept="image/*"
-            onChange={handleImageUpload} disabled={isDrawing} style={{ display: 'none' }} />
-        </label>
+        <div style={{
+          transform: `scale(${zoom})`,
+          transformOrigin: 'top left',
+        }}>
+          <canvas ref={canvasRef}
+            width={canvasSize}
+            height={canvasSize}
+            style={{
+              display: 'block',
+              borderRadius: 10,
+              cursor: tool === 'eyedropper' ? 'crosshair' : 'crosshair',
+              background: '#fff',
+            }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerLeave}
+          />
+        </div>
+      </div>
+
+      {/* ズームスライダー */}
+      <div style={{
+        padding: '6px 12px',
+        textAlign: 'center',
+        borderTop: '1px solid #ccc',
+      }}>
+        🔍 ズーム: {Math.round(zoom * 100)}%
+        <input type="range" min="0.5" max="2" step="0.1" value={zoom}
+          onChange={e => setZoom(parseFloat(e.target.value))} disabled={isDrawing}
+          style={{ marginLeft: 12, verticalAlign: 'middle' }}
+        />
       </div>
     </div>
   );

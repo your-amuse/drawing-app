@@ -1,0 +1,187 @@
+/* モーダル全体 */
+.canvas-modal {
+  position: fixed;
+  top: 0; bottom: 0; left: 0; right: 0;
+  background: rgba(255,255,255,0.95);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0;
+  font-family: "Noto Sans JP", sans-serif;
+  z-index: 1000;
+}
+
+/* ツールバー（上部固定） */
+.toolbar {
+  position: sticky;
+  top: 0;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: saturate(180%) blur(10px);
+  border-bottom: 1px solid #ccc;
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 10;
+}
+
+/* タブ */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.tab-button {
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.tab-button.active,
+.tab-button:hover {
+  background: #1976d2;
+  color: white;
+  border-color: #1976d2;
+}
+
+/* ツールボタン */
+.tool-buttons button {
+  background: #eee;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  margin-right: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tool-buttons button.active,
+.tool-buttons button:hover {
+  background: #1976d2;
+  color: white;
+  border-color: #1976d2;
+}
+
+/* カラーコントロール */
+.color-controls label {
+  margin-right: 1rem;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* 編集ボタン */
+.edit-buttons button {
+  background: #f5f5f5;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  margin-left: auto;
+  margin-right: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.edit-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-buttons button:hover:not(:disabled) {
+  background: #1976d2;
+  color: white;
+  border-color: #1976d2;
+}
+
+/* キャンバスエリア */
+.canvas-wrapper {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+  position: relative;
+  background: white;
+  border: 1px solid #ddd;
+  margin: 0.5rem 1rem;
+}
+
+.drawing-canvas,
+.temp-canvas {
+  background: white;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  user-select: none;
+  touch-action: none;
+  display: block;
+  width: 600px;
+  height: 600px;
+  position: relative;
+  z-index: 1;
+}
+
+.temp-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* フッター（完了・キャンセルボタン） */
+.footer-buttons {
+  position: sticky;
+  bottom: 0;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: saturate(180%) blur(10px);
+  border-top: 1px solid #ccc;
+  padding: 0.75rem 1rem;
+  text-align: right;
+  z-index: 10;
+}
+
+.footer-buttons button {
+  background: #1976d2;
+  border: none;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  margin-left: 0.75rem;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.footer-buttons button.cancel-btn {
+  background: #888;
+}
+
+.footer-buttons button.cancel-btn:hover {
+  background: #555;
+}
+
+.footer-buttons button.save-btn:hover {
+  background: #115293;
+}
+
+/* スマホ対応（任意） */
+@media screen and (max-width: 700px) {
+  .canvas-wrapper {
+    margin: 0.25rem 0.5rem;
+  }
+  .drawing-canvas,
+  .temp-canvas {
+    width: 90vw;
+    height: 90vw;
+  }
+  .toolbar,
+  .footer-buttons {
+    padding: 0.5rem;
+  }
+}
