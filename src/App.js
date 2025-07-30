@@ -14,7 +14,8 @@ import Thanks from './components/Thanks';
 import Layout from './components/Layout'; // ← 追加
 import ScrollToTop from './components/ScrollToTop';
 import PaymentForm from './components/PaymentForm';
-
+import ChatRoomList from './components/ChatRoomList';
+import ChatRoomWrapper from './pages/ChatRoomWrapper';
 
 function App() {
   return (
@@ -26,28 +27,14 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="order" element={<Order />} />
-            <Route path="shipping" element={
-              <RequireAuth>
-                <ShippingForm />
-              </RequireAuth>
-            } />
-            <Route path="confirm" element={
-              <RequireAuth>
-                <ConfirmOrder />
-              </RequireAuth>
-            } />
-            <Route path="/payment" element={
-              <RequireAuth>
-                <PaymentForm />
-              </RequireAuth>
-          } />
-            <Route path="thanks" element={
-              <RequireAuth>
-                <Thanks />
-              </RequireAuth>
-            } />
+            <Route path="shipping" element={<RequireAuth><ShippingForm /></RequireAuth>} />
+            <Route path="confirm" element={<RequireAuth><ConfirmOrder /></RequireAuth>} />
+            <Route path="payment" element={<RequireAuth><PaymentForm /></RequireAuth>} />
+            <Route path="thanks" element={<RequireAuth><Thanks /></RequireAuth>} />
+            {/* チャット関連 */}
+            <Route path="chatroom" element={<ChatRoomList />} />
+            <Route path="chatroom/:roomId" element={<ChatRoomWrapper />} />
           </Route>
-
           {/* ログイン・サインアップはレイアウト外（サイドバー非表示） */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
